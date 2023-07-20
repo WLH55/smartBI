@@ -129,7 +129,7 @@ public class ChartController {
      * @return
      */
     @GetMapping("/get")
-    public BaseResponse<Chart> getchartVOById(long id, HttpServletRequest request) {
+    public BaseResponse<Chart> getchartById(long id, HttpServletRequest request) {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -147,8 +147,8 @@ public class ChartController {
      * @param request
      * @return
      */
-    @PostMapping("/list/page/vo")
-    public BaseResponse<Page<Chart>> listchartVOByPage(@RequestBody ChartQueryRequest chartQueryRequest,
+    @PostMapping("/list/page")
+    public BaseResponse<Page<Chart>> listchartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
             HttpServletRequest request) {
         long current = chartQueryRequest.getCurrent();
         long size = chartQueryRequest.getPageSize();
@@ -166,8 +166,8 @@ public class ChartController {
      * @param request
      * @return
      */
-    @PostMapping("/my/list/page/vo")
-    public BaseResponse<Page<Chart>> listMychartVOByPage(@RequestBody ChartQueryRequest chartQueryRequest,
+    @PostMapping("/my/list/page")
+    public BaseResponse<Page<Chart>> listMychartByPage(@RequestBody ChartQueryRequest chartQueryRequest,
             HttpServletRequest request) {
         if (chartQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -232,7 +232,7 @@ public class ChartController {
         String chartType = chartQueryRequest.getChartType();
         Long userId = chartQueryRequest.getUserId();
 
-        queryWrapper.eq(id > 0, "id", id);
+        queryWrapper.eq(id != null && id > 0, "id", id);
         queryWrapper.eq(StringUtils.isNotBlank(goal), "goal", goal);
         queryWrapper.eq(StringUtils.isNotBlank(chartType), "chartType", chartType);
         queryWrapper.eq(ObjectUtils.isNotEmpty(userId), "userId", userId);
