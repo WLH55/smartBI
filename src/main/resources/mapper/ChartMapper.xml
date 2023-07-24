@@ -21,7 +21,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,goal,name,
+        id,goal,'name',
         chartData,chartType,genChart,
         genResult,status,execMessage,
         userId,createTime,updateTime,
