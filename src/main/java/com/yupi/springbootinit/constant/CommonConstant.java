@@ -17,5 +17,7 @@ public interface CommonConstant {
      * 降序
      */
     String SORT_ORDER_DESC = " descend";
+
+    Long AI_MODEL = 1683130877963513857L;
     
 }
