@@ -69,10 +69,14 @@ BI（Business Intelligence），中文可译作商业智能，是一种用于支
 ## 项目主要功能截图
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28467887/1692445299927-04dfb341-11b6-4e10-a423-20564981d47d.png#averageHue=%23f8f8f8&clientId=u89c9280f-a31e-4&from=paste&height=465&id=u0eb604c9&originHeight=581&originWidth=1899&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=58693&status=done&style=none&taskId=ue1b6c798-9c5d-4eed-938f-6877219ad48&title=&width=1519.2)
+
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28467887/1692445333768-bb07b8df-ee51-4687-8619-a2e840669857.png#averageHue=%23f9f9f9&clientId=u89c9280f-a31e-4&from=paste&height=454&id=u00eafd62&originHeight=568&originWidth=1905&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=51907&status=done&style=none&taskId=u7695de8a-870c-44f1-a9a8-18ae640e982&title=&width=1524)
+
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28467887/1692445355888-31fcdf32-e19b-4b6e-abd1-a9251a1cb615.png#averageHue=%23f7f7f7&clientId=u89c9280f-a31e-4&from=paste&height=686&id=ucbec6fc3&originHeight=857&originWidth=1907&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=111919&status=done&style=none&taskId=u57e4b36b-f6b7-449e-838d-13172eebd0c&title=&width=1525.6)
+
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/28467887/1692445400536-ddcd8be7-3894-486a-88b3-0a13949ad34c.png#averageHue=%23f9f9f9&clientId=u89c9280f-a31e-4&from=paste&height=576&id=ufaab22d5&originHeight=720&originWidth=1912&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=58570&status=done&style=none&taskId=ub9a6bc9d-9373-4e46-82b0-c93ae76edd3&title=&width=1529.6)
 
+![img_1.png](img_1.png)
 ## 
 
 
