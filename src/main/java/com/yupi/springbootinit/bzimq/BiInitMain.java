@@ -13,9 +13,9 @@ public class BiInitMain  {
         try {
             ConnectionFactory factory = new ConnectionFactory();
         	// 设置 rabbitmq 对应的信息
-       	 	factory.setHost("localhost");
-//        	factory.setUsername("xxxx.xxxx.xxx");
-//        	factory.setPassword("xxx.xxx.xxx");
+       	 	factory.setHost("47.113.186.223");
+        	factory.setUsername("guest");
+        	factory.setPassword("guest");
 
             // 创建与 RabbitMQ 服务器的连接
             Connection connection = factory.newConnection();
