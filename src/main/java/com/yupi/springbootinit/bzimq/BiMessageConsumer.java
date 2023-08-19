@@ -2,13 +2,15 @@ package com.yupi.springbootinit.bzimq;
 
 import com.rabbitmq.client.Channel;
 import com.yupi.springbootinit.common.ErrorCode;
+import com.yupi.springbootinit.constant.BiMqConstant;
+import com.yupi.springbootinit.constant.ChartConstant;
 import com.yupi.springbootinit.constant.CommonConstant;
 import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.manager.AiManger;
 import com.yupi.springbootinit.model.entity.Chart;
+import com.yupi.springbootinit.model.enums.ChartStatus;
 import com.yupi.springbootinit.service.ChartService;
 import lombok.extern.slf4j.Slf4j;
-import net.bytebuddy.implementation.bytecode.Throw;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
@@ -36,7 +38,7 @@ public class BiMessageConsumer {
      * @param channel
      * @param deliveryTag
      */
-    @RabbitListener(queues = {BiMqConstant.BI_QUEUE_NAME}, ackMode = "MANUAL")
+    @RabbitListener(queues = { BiMqConstant.BI_QUEUE_NAME}, ackMode = "MANUAL")
     private void receiveMessage(String message, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
       log.info("receiveMessage = {}",message);
 
@@ -53,7 +55,7 @@ public class BiMessageConsumer {
             }
             Chart updateChart = new Chart();
             updateChart.setId(chart.getId());
-            updateChart.setStatus("running");
+            updateChart.setStatus(ChartStatus.RUNNING.getValue());
             boolean b = chartService.updateById(updateChart);
             if(!b){
                 channel.basicNack(deliveryTag,false,false);
@@ -64,20 +66,20 @@ public class BiMessageConsumer {
 
             //调用AI接口
             String result = aiManger.doChatByAi(CommonConstant.AI_MODEL, buildUserInput(chart));
-            String[] splits = result.split("【【【【");
-            if (splits.length < 3) {
+            String[] splits = result.split(ChartConstant.GEN_CONTENT_SPLITS);
+            if (splits.length < ChartConstant.GEN_ITEM_NUM) {
                 channel.basicNack(deliveryTag, false, false);
                 handleChartUpdateError(chart.getId(), "AI生成失败");
                 return;
             }
-            String chartCode = splits[1].trim();
-            String chartResult = splits[2].trim();
+            String chartCode = splits[ChartConstant.GEN_CHART_IDX].trim();
+            String chartResult = splits[ChartConstant.GEN_RESULT_IDX].trim();
             //调用AI得到结果后，更新图表状态
             Chart updateChart2 = new Chart();
             updateChart2.setId(chart.getId());
             updateChart2.setGenChart(chartCode);
             updateChart2.setGenResult(chartResult);
-            updateChart2.setStatus("succeed");
+            updateChart2.setStatus(ChartStatus.SUCCEED.getValue());
 
             boolean update2 = chartService.updateById(updateChart2);
             if (!update2) {
@@ -113,7 +115,7 @@ public class BiMessageConsumer {
     private void handleChartUpdateError(long chartId, String execMessage) {
         Chart updateChart = new Chart();
         updateChart.setId(chartId);
-        updateChart.setStatus("failed");
+        updateChart.setStatus(ChartStatus.FAILED.getValue());
         updateChart.setExecMessage(execMessage);
         boolean update = chartService.updateById(updateChart);
         if (!update) {

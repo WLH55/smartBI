@@ -3,33 +3,32 @@ package com.yupi.springbootinit.controller;
 import cn.hutool.core.io.FileUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.google.gson.Gson;
 import com.yupi.springbootinit.annotation.AuthCheck;
 import com.yupi.springbootinit.bzimq.BiMessageProducer;
 import com.yupi.springbootinit.common.BaseResponse;
 import com.yupi.springbootinit.common.DeleteRequest;
 import com.yupi.springbootinit.common.ErrorCode;
 import com.yupi.springbootinit.common.ResultUtils;
+import com.yupi.springbootinit.constant.ChartConstant;
 import com.yupi.springbootinit.constant.CommonConstant;
-import com.yupi.springbootinit.constant.FileConstant;
 import com.yupi.springbootinit.constant.UserConstant;
 import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.exception.ThrowUtils;
 import com.yupi.springbootinit.manager.AiManger;
 import com.yupi.springbootinit.manager.RedisLimiterManager;
 import com.yupi.springbootinit.model.dto.chart.*;
-import com.yupi.springbootinit.model.dto.file.UploadFileRequest;
 import com.yupi.springbootinit.model.entity.Chart;
 import com.yupi.springbootinit.model.entity.User;
-import com.yupi.springbootinit.model.enums.FileUploadBizEnum;
+import com.yupi.springbootinit.model.enums.ChartStatus;
 import com.yupi.springbootinit.model.vo.BiResponse;
 import com.yupi.springbootinit.service.ChartService;
 import com.yupi.springbootinit.service.UserService;
+import com.yupi.springbootinit.utils.BiChartUtils;
 import com.yupi.springbootinit.utils.ExcelUtils;
 import com.yupi.springbootinit.utils.SqlUtils;
+import com.yupi.springbootinit.utils.ValidationUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -37,17 +36,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import static com.yupi.springbootinit.constant.ChartConstant.File_SIZE_ONE;
+import static com.yupi.springbootinit.constant.ChartConstant.VALID_FILE_SUFFIX;
+
 /**
  * 帖子接口
- *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
  */
 @RestController
 @RequestMapping("/chart")
@@ -243,35 +241,23 @@ public class ChartController {
      */
     @PostMapping("/gen")
     public BaseResponse<BiResponse> genChartByAI(@RequestPart("file") MultipartFile multipartFile,
-                                                 GenChatByAiRequest genChatByAiRequest, HttpServletRequest request) {
-        String goal = genChatByAiRequest.getGoal();
-        String name = genChatByAiRequest.getName();
-        String chartType = genChatByAiRequest.getChartType();
-        //效验
-        //如果分析目标为空，则抛出请求参数错误异常，并给出提示
-        //鱼哥自己的工具类，可以自己写
-        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "分析目标不能为空");
-        //如果名称不为空，且长度大于100，则抛出请求参数错误异常，并给出提示
-        ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
-        //效验文件
-        //文件白名单
-        List<String> VALTD_FILE_SUFFIX = Arrays.asList("xls", "xlsx");
-        //限制文件大小
-        long MAX_FILE_SIZE = 1 * 1024 * 1024L;
-        long fileSize = multipartFile.getSize();
-        String originalFilename = multipartFile.getOriginalFilename();
-        //FileUtil  Hutool工具类
-        String suffix = FileUtil.getSuffix(originalFilename);
-        ThrowUtils.throwIf(fileSize > MAX_FILE_SIZE, ErrorCode.PARAMS_ERROR, "文件过大");
-        ThrowUtils.throwIf(!VALTD_FILE_SUFFIX.contains(suffix), ErrorCode.PARAMS_ERROR, "文件格式不正确");
+                                                 GenChartByAiRequest genChatByAiRequest, HttpServletRequest request) {
 
+
+        ValidationUtil.validateGenChartByAiRequest(genChatByAiRequest);
+
+
+        /**
+         * 三个参数：文件，文件最大大小，后缀限制
+         */
+        ValidationUtil.validateFile(multipartFile, File_SIZE_ONE, VALID_FILE_SUFFIX);
 
         //先验证是否登录
         User loginUser = userService.getLoginUser(request);
         //用户限流,每个用户一个限流器
-        redisLimiterManager.doRateLimiter("genCharByAi_" + loginUser.getId());
+        redisLimiterManager.doRateLimiter(ChartConstant.LIMIT_PREFIX + loginUser.getId());
         //指定一个模型id（把id写死）
-        long modelId = 1683130877963513857L;
+        long modelId = CommonConstant.AI_MODEL;
 
 //        用户的输入（参考）
 //        分析需求：
@@ -283,36 +269,26 @@ public class ChartController {
 //        3号，30
 //
 
-        //用户输入
-        StringBuilder userInput = new StringBuilder();
-        String userGoal = goal;
-        if (StringUtils.isNotBlank(chartType)) {
-            userGoal += ", 请使用" + chartType;
-        }
-        userInput.append("分析需求：").append(userGoal).append("\n");
-
-        String csvData = ExcelUtils.excelToCsv(multipartFile);
-        userInput.append("原始数据：").append(csvData).append("\n");
+        String goal = genChatByAiRequest.getGoal();
+        String chartType = genChatByAiRequest.getChartType();
+        String chartName = genChatByAiRequest.getName();
+        //构造用户输入
+        String userInput = BiChartUtils.getUserInput(goal, chartType, multipartFile);
         //调用AI接口
-        String result = aiManger.doChatByAi(modelId, userInput.toString());
-        String[] splits = result.split("【【【【");
-        if (splits.length < 3) {
+        String result = aiManger.doChatByAi(modelId, userInput);
+        String[] splits = result.split(ChartConstant.GEN_CONTENT_SPLITS);
+        if (splits.length < ChartConstant.GEN_ITEM_NUM) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "分析失败");
         }
-        String chartCode = splits[1].trim();
-        String chartResult = splits[2].trim();
-        Chart chart = new Chart();
-        chart.setGoal(goal);
-        chart.setName(name);
-        chart.setChartData(csvData);
-        chart.setChartType(chartType);
-        chart.setUserId(loginUser.getId());
+        String chartCode = splits[ChartConstant.GEN_CHART_IDX].trim();
+        String chartResult = splits[ChartConstant.GEN_RESULT_IDX].trim();
+        //插入到数据库
+        String csvData = ExcelUtils.excelToCsv(multipartFile);
 
-        chart.setGenChart(chartCode);
-        chart.setGenResult(chartResult);
-        boolean chartSave = chartService.save(chart);
-        ThrowUtils.throwIf(!chartSave, ErrorCode.SYSTEM_ERROR, "图表保存失败");
-
+        Chart chart = BiChartUtils.getBiChart(chartName, goal, chartType, csvData, chartCode, chartResult, loginUser);
+        chart.setStatus(ChartStatus.SUCCEED.getValue());
+        boolean saveResult = chartService.save(chart);
+        ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "图表保存失败");
         //拿到返回结果
         //对结果进行拆分
         //对拆分结果做效验
@@ -335,7 +311,7 @@ public class ChartController {
      */
     @PostMapping("/gen/async")
     public BaseResponse<BiResponse> genChartByAiWithAsync(@RequestPart("file") MultipartFile multipartFile,
-                                                          GenChatByAiRequest genChatByAiRequest, HttpServletRequest request) {
+                                                          GenChartByAiRequest genChatByAiRequest, HttpServletRequest request) {
         String goal = genChatByAiRequest.getGoal();
         String name = genChatByAiRequest.getName();
         String chartType = genChatByAiRequest.getChartType();
@@ -361,9 +337,9 @@ public class ChartController {
         //先验证是否登录
         User loginUser = userService.getLoginUser(request);
         //用户限流,每个用户一个限流器
-        redisLimiterManager.doRateLimiter("genCharByAi_" + loginUser.getId());
+        redisLimiterManager.doRateLimiter(ChartConstant.LIMIT_PREFIX + loginUser.getId());
         //指定一个模型id（把id写死）
-        long modelId = 1683130877963513857L;
+        long modelId = CommonConstant.AI_MODEL;
 
 //        用户的输入（参考）
 //        分析需求：
@@ -393,7 +369,7 @@ public class ChartController {
         chart.setChartType(chartType);
         chart.setUserId(loginUser.getId());
         //设置任务状态为等待
-        chart.setStatus("Wait");
+        chart.setStatus(ChartStatus.WAIT.getValue());
         //插入数据库时，AI还没生成完成数据，这几个先不插入
 //        chart.setGenChart();
 //        chart.setGenResult();
@@ -405,26 +381,26 @@ public class ChartController {
             //先修改图标状态为处理中，等执行完毕后，再修改为完成，保存执行结果;执行失败，修改为失败
             Chart updateChart = new Chart();
             updateChart.setId(chart.getId());
-            updateChart.setStatus("Running");
+            updateChart.setStatus(ChartStatus.RUNNING.getValue());
             boolean update = chartService.updateById(updateChart);
             if (!update) {
-                handleChartUpdateError(chart.getId(), "更新图标状态为Running失败");
+                handleChartUpdateError(chart.getId(), "更新图表状态为Running失败");
                 return;
             }
 
             //调用AI接口
             String result = aiManger.doChatByAi(modelId, userInput.toString());
-            String[] splits = result.split("【【【【");
-            if (splits.length < 3) {
+            String[] splits = result.split(ChartConstant.GEN_CONTENT_SPLITS);
+            if (splits.length < ChartConstant.GEN_ITEM_NUM) {
                 handleChartUpdateError(chart.getId(), "AI生成失败");
                 return;
             }
-            String chartCode = splits[1].trim();
-            String chartResult = splits[2].trim();
+            String chartCode = splits[ChartConstant.GEN_CHART_IDX].trim();
+            String chartResult = splits[ChartConstant.GEN_RESULT_IDX].trim();
             //调用AI得到结果后，更新图表状态
             Chart updateChart2 = new Chart();
             updateChart2.setId(chart.getId());
-            updateChart2.setStatus("succeed");
+            updateChart2.setStatus(ChartStatus.SUCCEED.getValue());
             updateChart2.setGenChart(chartCode);
             updateChart2.setGenResult(chartResult);
             boolean update2 = chartService.updateById(updateChart2);
@@ -433,23 +409,17 @@ public class ChartController {
             }
 
         }, threadPoolExecutor);
-        //拿到返回结果
-        //对结果进行拆分
-        //对拆分结果做效验
-        //设置响应体对象，返回给前端
+
         BiResponse biResponse = new BiResponse();
-//        biResponse.setGenChart(chartCode);
-//        biResponse.setGenResult(chartResult);
         biResponse.setChartId(chart.getId());
         return ResultUtils.success(biResponse);
-
     }
 
     //上面的接口用到很多异常，直接定义一个工具
     private void handleChartUpdateError(long chartId, String execMessage) {
         Chart updateChart = new Chart();
         updateChart.setId(chartId);
-        updateChart.setStatus("failed");
+        updateChart.setStatus(ChartStatus.FAILED.getValue());
         updateChart.setExecMessage(execMessage);
         boolean update = chartService.updateById(updateChart);
         if (!update) {
@@ -467,7 +437,7 @@ public class ChartController {
      */
     @PostMapping("/gen/async/mq")
     public BaseResponse<BiResponse> genChartByAiWithAsyncMq(@RequestPart("file") MultipartFile multipartFile,
-                                                            GenChatByAiRequest genChatByAiRequest, HttpServletRequest request) {
+                                                            GenChartByAiRequest genChatByAiRequest, HttpServletRequest request) {
         String goal = genChatByAiRequest.getGoal();
         String name = genChatByAiRequest.getName();
         String chartType = genChatByAiRequest.getChartType();
@@ -488,26 +458,12 @@ public class ChartController {
         String suffix = FileUtil.getSuffix(originalFilename);
         ThrowUtils.throwIf(fileSize > MAX_FILE_SIZE, ErrorCode.PARAMS_ERROR, "文件过大");
         ThrowUtils.throwIf(!VALTD_FILE_SUFFIX.contains(suffix), ErrorCode.PARAMS_ERROR, "文件格式不正确");
-
-
         //先验证是否登录
         User loginUser = userService.getLoginUser(request);
         //用户限流,每个用户一个限流器
-        redisLimiterManager.doRateLimiter("genCharByAi_" + loginUser.getId());
+        redisLimiterManager.doRateLimiter(ChartConstant.LIMIT_PREFIX + loginUser.getId());
         //指定一个模型id（把id写死）
-        long modelId = 1683130877963513857L;
-
-//        用户的输入（参考）
-//        分析需求：
-//        分析网站用户的增长情况
-//        原始数据：
-//        日期，用户数
-//        1号，10
-//        2号，20
-//        3号，30
-//
-
-
+        long modelId = CommonConstant.AI_MODEL;
         String csvData = ExcelUtils.excelToCsv(multipartFile);
         //先把图表保存到数据库
         Chart chart = new Chart();
@@ -517,7 +473,7 @@ public class ChartController {
         chart.setChartType(chartType);
         chart.setUserId(loginUser.getId());
         //设置任务状态为等待
-        chart.setStatus("Wait");
+        chart.setStatus(ChartStatus.WAIT.getValue());
         //插入数据库时，AI还没生成完成数据，这几个先不插入
 //        chart.setGenChart();
 //        chart.setGenResult();
@@ -532,7 +488,6 @@ public class ChartController {
         return ResultUtils.success(biResponse);
 
     }
-
 
 
     /**

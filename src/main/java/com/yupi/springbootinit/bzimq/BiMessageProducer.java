@@ -1,5 +1,6 @@
 package com.yupi.springbootinit.bzimq;
 
+import com.yupi.springbootinit.constant.BiMqConstant;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 

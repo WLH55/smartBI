@@ -7,7 +7,7 @@ import lombok.Data;
  * @verstion 1.0
  */
 @Data
-public class GenChatByAiRequest {
+public class GenChartByAiRequest {
 
 
     /**

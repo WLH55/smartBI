@@ -1,5 +1,6 @@
 package com.yupi.springbootinit.config;
 
+import com.yupi.springbootinit.handler.MyDiscardPolicy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -37,7 +38,7 @@ public class ThreadPoolExecutorConfig {
         // 创建线程池，线程池中的线程数最小为2，最大为4
         //非核心线程的空闲时间为100秒，超过这个时间就会被回收，任务队列采用阻塞队列，长度为100
         ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(2, 4, 100, TimeUnit.SECONDS,
-                new ArrayBlockingQueue<>(100), threadFactory);
+                new ArrayBlockingQueue<>(100), threadFactory,new MyDiscardPolicy());
         //返回线程池
         return threadPoolExecutor;
 

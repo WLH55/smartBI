@@ -2,7 +2,6 @@ package com.yupi.springbootinit.manager;
 
 import com.yupi.springbootinit.common.ErrorCode;
 import com.yupi.springbootinit.exception.BusinessException;
-import com.yupi.springbootinit.model.dto.chart.GenChatByAiRequest;
 import com.yupi.yucongming.dev.client.YuCongMingClient;
 import com.yupi.yucongming.dev.common.BaseResponse;
 import com.yupi.yucongming.dev.model.DevChatRequest;
