@@ -16,6 +16,7 @@ BI（Business Intelligence），中文可译作商业智能，是一种用于支
 ## 本项目的智能BI平台
 
 区别于传统的BI，用户（数据分析者）只需要导入最原始的数据集，输入想要进行分析的目标（比如帮我分析一下网站的增长趋势)，就能利用AI自动生成一个符合要求的图表以及分析结论。此外，还会有图表管理、异步生成等功能。
+
 **优点：让不会数据分析的用户也可以通过输入目标快速完成数据分析，大幅节约人力成本，将会用到 AI 接口生成分析结果**
 
 ## 项目架构图
@@ -42,16 +43,16 @@ BI（Business Intelligence），中文可译作商业智能，是一种用于支
 
 ### 后端
 
-Java Spring Boot
-MySQL数据库
-MyBatis Plus及MyBatis X自动生成
-Redis+Redisson限流
-RabbitMQ消息队列
-鱼聪明AI SDK(AI能力)
-JDK线程池及异步化
-Easy Excel表格数据处理
-Swagger+Knife4j接口文档生成
-Hutool、Apache Common Utils等工具库
+- Java Spring Boot 2.7.2
+- MySQL数据库
+- MyBatis Plus及MyBatis X自动生成
+- Redis+Redisson限流
+- RabbitMQ消息队列
+- 鱼聪明AI SDK(AI能力)
+- JDK线程池及异步化
+- Easy Excel表格数据处理
+- Swagger+Knife4j接口文档生成
+- Hutool、Apache Common Utils等工具库
 
 ## 业务流程
 
